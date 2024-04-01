@@ -44,6 +44,12 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 uint32_t left_toggles=0;
+uint32_t right_toggles=0;
+uint32_t hazard_toggles=0;
+
+volatile uint8_t left_flag = 0;
+volatile uint8_t right_flag = 0;
+volatile uint8_t hazard_flag = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -58,46 +64,43 @@ static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN 0 */
 
 void turn_signal_left(void){
-	static uint32_t turn_toggle_tick =0;
-	if (turn_toggle_tick < HAL_GetTick()&&left_toggles>0){
-		if (left_toggles>0){
-			turn_toggle_tick = HAL_GetTick()+500;
-			HAL_GPIO_TogglePin(D3_GPIO_Port, D3_Pin);
-			left_toggles-- ;
-		}
-		else{HAL_GPIO_WritePin(D3_GPIO_Port, D3_Pin, 1);
-		}
-	}
+    static uint32_t turn_toggle_tick = 0;
+    static uint8_t blink_count = 0;  // Variable para contar el número de parpadeos
+    if (blink_count < 6) {  // Parpadea solo si no se han completado los tres parpadeos
+        if (turn_toggle_tick < HAL_GetTick()){
+            turn_toggle_tick =  HAL_GetTick() + 670;
+            HAL_GPIO_TogglePin(D3_GPIO_Port,D3_Pin);
+            blink_count++;  // Incrementa el contador de parpadeos
+        }
+    }
 }
+
 
 void turn_signal_right(void){
-	static uint32_t turn_toggle_tick =0;
-	if (turn_toggle_tick < HAL_GetTick()&&left_toggles>0){
-		if (left_toggles>0){
-			turn_toggle_tick = HAL_GetTick()+500;
-			HAL_GPIO_TogglePin(D4_GPIO_Port, D4_Pin);
-			left_toggles-- ;
-		}
-		else{HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, 1);
-		}
-	}
+    static uint32_t turn_toggle_tick = 0;
+    static uint8_t blink_count = 0;  // Variable para contar el número de parpadeos
+    if (blink_count < 6) {  // Parpadea solo si no se han completado los tres parpadeos
+        if (turn_toggle_tick < HAL_GetTick()){
+            turn_toggle_tick =  HAL_GetTick() + 670;
+            HAL_GPIO_TogglePin(D4_GPIO_Port,D4_Pin);
+            blink_count++;  // Incrementa el contador de parpadeos
+        }
+    }
 }
 
+
 void turn_signal_hazard(void){
-	static uint32_t turn_toggle_tick =0;
-	if (turn_toggle_tick < HAL_GetTick()&&left_toggles>0){
-		if (left_toggles>0){
-			turn_toggle_tick = HAL_GetTick()+500;
-			HAL_GPIO_TogglePin(D3_GPIO_Port, D3_Pin);
-			HAL_GPIO_TogglePin(D4_GPIO_Port, D4_Pin);
-			HAL_GPIO_TogglePin(SP_GPIO_Port, SP_Pin);
-			left_toggles--;
-		}else{
-		    HAL_GPIO_WritePin(D3_GPIO_Port, D3_Pin, 1);
-		    HAL_GPIO_WritePin(D4_GPIO_Port, D4_Pin, 1);
-		    HAL_GPIO_WritePin(SP_GPIO_Port, SP_Pin, 0);
-		}
-	}
+    static uint32_t turn_toggle_tick = 0;
+    static uint8_t blink_count = 0;  // Variable para contar el número de parpadeos
+    if (blink_count < 6) {  // Parpadea solo si no se han completado los tres parpadeos
+        if (turn_toggle_tick < HAL_GetTick()){
+            turn_toggle_tick =  HAL_GetTick() + 670;
+            HAL_GPIO_TogglePin(D3_GPIO_Port,D3_Pin);
+            HAL_GPIO_TogglePin(D4_GPIO_Port,D4_Pin);
+            HAL_GPIO_TogglePin(SP_GPIO_Port,SP_Pin);
+            blink_count++;  // Incrementa el contador de parpadeos
+        }
+    }
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
@@ -105,25 +108,25 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
   //UNUSED(GPIO_Pin);
   if (GPIO_Pin==S1_Pin){// LEFT
 	  HAL_UART_Transmit(&huart2, "LEFT\r\n", 6, 10);
-	  left_toggles=6;
-	  turn_signal_left();
+	  left_flag = 1;
   } else if (GPIO_Pin==S3_Pin){//RIGHT
 	  HAL_UART_Transmit(&huart2, "RIGHT\r\n", 7, 10);
-	  left_toggles=6;
-	  turn_signal_right();
+	  right_flag = 1;
   } else if (GPIO_Pin==S2_Pin){//HAZARD
 	  HAL_UART_Transmit(&huart2, "HAZARD\r\n", 8, 10);
-	  turn_signal_hazard();
+	  hazard_flag = 1;
   }
+
 }
 
 void hearbeat(void){
 	static uint32_t heartbeat_tick =0;
 	if (heartbeat_tick < HAL_GetTick()){
-		heartbeat_tick =  HAL_GetTick()+500;
+		heartbeat_tick =  HAL_GetTick()+1000;
 		HAL_GPIO_TogglePin(D1_GPIO_Port,D1_Pin);
 	}
 }
+
 
 
 /* USER CODE END 0 */
@@ -166,7 +169,20 @@ int main(void)
   while (1)
   {
     /* USER CODE END WHILE */
-
+	 hearbeat();
+	 if (left_flag==1) {
+	             turn_signal_left();
+	             //left_flag = 0; // Reinicia la bandera después de manejar la interrupción
+	         }
+	 if (right_flag==1) {
+	             turn_signal_right();
+	             //right_flag = 0; // Reinicia la bandera después de manejar la interrupción
+	         }
+	 if (hazard_flag==1) {
+	             turn_signal_hazard();
+	             //hazard_flag = 0; // Reinicia la bandera después de manejar la interrupción
+	         }
+	 //turn_signal_left();
     /* USER CODE BEGIN 3 */
   }
   /* USER CODE END 3 */
@@ -312,13 +328,13 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(D4_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 1, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 1);
   HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 1);
   HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
