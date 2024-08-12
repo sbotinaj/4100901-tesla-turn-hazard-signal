@@ -50,6 +50,9 @@ uint32_t hazard_toggles=0;
 volatile uint8_t left_flag = 0;
 volatile uint8_t right_flag = 0;
 volatile uint8_t hazard_flag = 0;
+
+uint8_t rx_data; // Variable para almacenar el dato recibido
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -103,17 +106,27 @@ void turn_signal_hazard(void){
     }
 }
 
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance == USART2) {
+        // Dato recibido, procesar aquí
+        HAL_UART_Transmit(&huart2, &rx_data, 1, HAL_MAX_DELAY); // Enviar de vuelta el dato recibido (eco)
+
+        // Reactivar la recepción por interrupción
+        HAL_UART_Receive_IT(&huart2, &rx_data, 3);
+    }
+}
+
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
   //UNUSED(GPIO_Pin);
   if (GPIO_Pin==S1_Pin){// LEFT
-	  HAL_UART_Transmit(&huart2, "LEFT\r\n", 6, 10);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)"LEFT\r\n", 6, 10);
 	  left_flag = 1;
   } else if (GPIO_Pin==S3_Pin){//RIGHT
-	  HAL_UART_Transmit(&huart2, "RIGHT\r\n", 7, 10);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)"RIGHT\r\n", 7, 10);
 	  right_flag = 1;
   } else if (GPIO_Pin==S2_Pin){//HAZARD
-	  HAL_UART_Transmit(&huart2, "HAZARD\r\n", 8, 10);
+	  HAL_UART_Transmit(&huart2, (uint8_t*)"HAZARD\r\n",8, HAL_MAX_DELAY);
 	  hazard_flag = 1;
   }
 
@@ -166,24 +179,13 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  HAL_UART_Receive_IT(&huart2, &rx_data, 10);
   while (1)
   {
     /* USER CODE END WHILE */
-	 hearbeat();
-	 if (left_flag==1) {
-	             turn_signal_left();
-	             //left_flag = 0; // Reinicia la bandera después de manejar la interrupción
-	         }
-	 if (right_flag==1) {
-	             turn_signal_right();
-	             //right_flag = 0; // Reinicia la bandera después de manejar la interrupción
-	         }
-	 if (hazard_flag==1) {
-	             turn_signal_hazard();
-	             //hazard_flag = 0; // Reinicia la bandera después de manejar la interrupción
-	         }
-	 //turn_signal_left();
+
     /* USER CODE BEGIN 3 */
+	 hearbeat();
   }
   /* USER CODE END 3 */
 }
@@ -328,13 +330,13 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(D4_GPIO_Port, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI0_IRQn, 1, 0);
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI0_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 1);
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 
-  HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 1);
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 
 /* USER CODE BEGIN MX_GPIO_Init_2 */
