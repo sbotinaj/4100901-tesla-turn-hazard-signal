@@ -53,6 +53,14 @@ volatile uint8_t hazard_flag = 0;
 
 uint8_t rx_data; // Variable para almacenar el dato recibido
 
+/*Variables para el Ring Buffer*/
+#define capacity 8
+uint8_t ring_buffer[capacity]; //Define el Ring Buffer
+uint8_t head_ptr; // Indice de excritura
+uint8_t tail_ptr; // Indice de lectura
+
+uint8_t is_full; //Bandera para verificar si RB esta lleno
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -109,10 +117,18 @@ void turn_signal_hazard(void){
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
     if (huart->Instance == USART2) {
         // Dato recibido, procesar aquí
-        HAL_UART_Transmit(&huart2, &rx_data, 1, HAL_MAX_DELAY); // Enviar de vuelta el dato recibido (eco)
 
-        // Reactivar la recepción por interrupción
-        HAL_UART_Receive_IT(&huart2, &rx_data, 3);
+        //HAL_UART_Transmit(&huart2, &rx_data, 1, HAL_MAX_DELAY); // Enviar de vuelta el dato recibido (eco)
+        ring_buffer[head_ptr] = rx_data;
+        head_ptr++;
+        if(head_ptr >= capacity){
+        	head_ptr =0;
+        }
+        if(head_ptr == tail_ptr){
+        	is_full=1;
+        }
+    	// Reactivar la recepción por interrupción
+        HAL_UART_Receive_IT(&huart2, &rx_data, 1);
     }
 }
 
@@ -179,13 +195,20 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  HAL_UART_Receive_IT(&huart2, &rx_data, 10);
+  HAL_UART_Receive_IT(&huart2, &rx_data, 1);
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	 hearbeat();
+	  if ((is_full != 0) || (head_ptr !=tail_ptr) ){
+		  uint8_t size = head_ptr-tail_ptr;
+		  size = size + '0'; // convierte a ascii
+		  HAL_UART_Transmit(&huart2, &size, 1, 10);
+		  HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, 10);
+	  }
+	  hearbeat();
+
   }
   /* USER CODE END 3 */
 }
