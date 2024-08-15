@@ -208,6 +208,19 @@ int main(void)
 		  HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, 10);
 	  }
 	  hearbeat();
+    // Manejo de las señales de giro
+	 if (left_flag==1) {
+				 turn_signal_left();
+				 //left_flag = 0; // Reinicia la bandera después de manejar la interrupción
+			 }
+	 if (right_flag==1) {
+				 turn_signal_right();
+				 //right_flag = 0; // Reinicia la bandera después de manejar la interrupción
+			 }
+	 if (hazard_flag==1) {
+				 turn_signal_hazard();
+				 //hazard_flag = 0; // Reinicia la bandera después de manejar la interrupción
+			 }
 
   }
   /* USER CODE END 3 */
