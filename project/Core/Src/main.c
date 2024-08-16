@@ -18,6 +18,9 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "ring_buffer.h"
+
+
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
@@ -54,12 +57,10 @@ volatile uint8_t hazard_flag = 0;
 uint8_t data; // Variable para almacenar el dato recibido
 
 /*Variables para el Ring Buffer*/
-#define capacity 8
-uint8_t ring_buffer[capacity]; //Define el Ring Buffer
-uint8_t head_ptr; // Indice de excritura
-uint8_t tail_ptr; // Indice de lectura
-
-uint8_t is_full; //Bandera para verificar si RB esta lleno
+#define BUFFER_CAPACITY 128
+uint8_t ring_buffer_data[BUFFER_CAPACITY];
+RingBuffer ring_buffer;
+uint8_t data;
 
 /* USER CODE END PV */
 
@@ -200,35 +201,17 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  ring_buffer_init(&ring_buffer, ring_buffer_data, BUFFER_CAPACITY);
   HAL_UART_Receive_IT(&huart2, &data, 1);
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  while ((is_full != 0) || (head_ptr != tail_ptr)) {
-	  		  uint8_t byte = ring_buffer[tail_ptr];
-	  		  tail_ptr = tail_ptr + 1;
-	  		  if (tail_ptr >= capacity) {
-	  			  tail_ptr = 0;
-	  		  }
-	  		  is_full = 0;
-	  		  HAL_UART_Transmit(&huart2, &byte, 1, 10);
-	  	  }
-	  hearbeat();
-    // Manejo de las señales de giro
-	 if (left_flag==1) {
-				 turn_signal_left();
-				 //left_flag = 0; // Reinicia la bandera después de manejar la interrupción
-			 }
-	 if (right_flag==1) {
-				 turn_signal_right();
-				 //right_flag = 0; // Reinicia la bandera después de manejar la interrupción
-			 }
-	 if (hazard_flag==1) {
-				 turn_signal_hazard();
-				 //hazard_flag = 0; // Reinicia la bandera después de manejar la interrupción
-			 }
+      while (ring_buffer.is_full || (ring_buffer.head != ring_buffer.tail)) {
+          uint8_t byte = ring_buffer_get(&ring_buffer);
+          // Procesar el byte
+      }
 
   }
   /* USER CODE END 3 */
