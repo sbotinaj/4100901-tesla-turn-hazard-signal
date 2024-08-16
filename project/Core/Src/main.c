@@ -51,7 +51,7 @@ volatile uint8_t left_flag = 0;
 volatile uint8_t right_flag = 0;
 volatile uint8_t hazard_flag = 0;
 
-uint8_t rx_data; // Variable para almacenar el dato recibido
+uint8_t data; // Variable para almacenar el dato recibido
 
 /*Variables para el Ring Buffer*/
 #define capacity 8
@@ -114,22 +114,27 @@ void turn_signal_hazard(void){
     }
 }
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    if (huart->Instance == USART2) {
-        // Dato recibido, procesar aquí
 
-        //HAL_UART_Transmit(&huart2, &rx_data, 1, HAL_MAX_DELAY); // Enviar de vuelta el dato recibido (eco)
-        ring_buffer[head_ptr] = rx_data;
-        head_ptr++;
-        if(head_ptr >= capacity){
-        	head_ptr =0;
-        }
-        if(head_ptr == tail_ptr){
-        	is_full=1;
-        }
-    	// Reactivar la recepción por interrupción
-        HAL_UART_Receive_IT(&huart2, &rx_data, 1);
-    }
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+{
+  if (huart->Instance == USART2) {
+	  //HAL_UART_Transmit(&huart2, &data, 1, 10);
+	  ring_buffer[head_ptr] = data;
+	  head_ptr = head_ptr + 1;
+	  if (head_ptr >= capacity) { // si la cabeza llega al final de la memoria
+		  head_ptr = 0;
+	  }
+	  if (is_full != 0) { // si se pierden datos viejos
+		  tail_ptr = tail_ptr + 1;
+	  }
+	  if (tail_ptr >= capacity) { // si la cola llega al final de la memoria
+		  tail_ptr = 0;
+	  }
+	  if (head_ptr == tail_ptr) { // si la cabeza alcanza la cola
+		  is_full = 1;
+	  }
+	  HAL_UART_Receive_IT(&huart2, &data, 1);
+  }
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
@@ -195,18 +200,21 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  HAL_UART_Receive_IT(&huart2, &rx_data, 1);
+  HAL_UART_Receive_IT(&huart2, &data, 1);
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-	  if ((is_full != 0) || (head_ptr !=tail_ptr) ){
-		  uint8_t size = head_ptr-tail_ptr;
-		  size = size + '0'; // convierte a ascii
-		  HAL_UART_Transmit(&huart2, &size, 1, 10);
-		  HAL_UART_Transmit(&huart2, (uint8_t*)"\r\n", 2, 10);
-	  }
+	  while ((is_full != 0) || (head_ptr != tail_ptr)) {
+	  		  uint8_t byte = ring_buffer[tail_ptr];
+	  		  tail_ptr = tail_ptr + 1;
+	  		  if (tail_ptr >= capacity) {
+	  			  tail_ptr = 0;
+	  		  }
+	  		  is_full = 0;
+	  		  HAL_UART_Transmit(&huart2, &byte, 1, 10);
+	  	  }
 	  hearbeat();
     // Manejo de las señales de giro
 	 if (left_flag==1) {
