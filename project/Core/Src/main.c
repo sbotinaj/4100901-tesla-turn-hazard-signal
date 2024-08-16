@@ -21,7 +21,6 @@
 #include "ring_buffer.h"
 
 
-
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -116,26 +115,11 @@ void turn_signal_hazard(void){
 }
 
 
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-  if (huart->Instance == USART2) {
-	  //HAL_UART_Transmit(&huart2, &data, 1, 10);
-	  ring_buffer[head_ptr] = data;
-	  head_ptr = head_ptr + 1;
-	  if (head_ptr >= capacity) { // si la cabeza llega al final de la memoria
-		  head_ptr = 0;
-	  }
-	  if (is_full != 0) { // si se pierden datos viejos
-		  tail_ptr = tail_ptr + 1;
-	  }
-	  if (tail_ptr >= capacity) { // si la cola llega al final de la memoria
-		  tail_ptr = 0;
-	  }
-	  if (head_ptr == tail_ptr) { // si la cabeza alcanza la cola
-		  is_full = 1;
-	  }
-	  HAL_UART_Receive_IT(&huart2, &data, 1);
-  }
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
+    if (huart->Instance == USART2) {
+        ring_buffer_put(&ring_buffer, data);
+        HAL_UART_Receive_IT(&huart2, &data, 1);
+    }
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)

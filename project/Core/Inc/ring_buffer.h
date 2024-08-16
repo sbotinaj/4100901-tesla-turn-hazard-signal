@@ -5,8 +5,10 @@
  *      Author: 57316
  */
 
-#ifndef SRC_RING_BUFFER_H_
-#define SRC_RING_BUFFER_H_
+#ifndef INC_RING_BUFFER_H_
+#define INC_RING_BUFFER_H_
+
+#include <stdint.h>
 
 // Create a ring buffer structure
 typedef struct {
