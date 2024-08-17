@@ -32,5 +32,5 @@ uint8_t ring_buffer_get(RingBuffer *rb) {
     uint8_t data = rb->buffer[rb->tail];
     rb->tail = (rb->tail + 1) % rb->capacity;
     rb->is_full = 0;
-    return data;
+    return data; // Buffer is not empty and data is returned
 }

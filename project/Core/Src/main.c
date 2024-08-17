@@ -192,9 +192,18 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-      while (ring_buffer.is_full || (ring_buffer.head != ring_buffer.tail)) {
+	  hearbeat();
+      if (ring_buffer.is_full || (ring_buffer.head != ring_buffer.tail)) {
           uint8_t byte = ring_buffer_get(&ring_buffer);
-          // Procesar el byte
+          // Procesar el byte 
+          HAL_UART_Transmit_IT(&huart2, &byte, 1);// Transmitir el byte de vuelta
+          if (byte == 'L') {
+              turn_signal_left();
+          } else if (byte == 'R') {
+              turn_signal_right();
+          } else if (byte == 'H') {
+              turn_signal_hazard();
+          }
       }
 
   }
