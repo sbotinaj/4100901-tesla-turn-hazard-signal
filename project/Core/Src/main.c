@@ -61,6 +61,10 @@ uint8_t ring_buffer_data[BUFFER_CAPACITY];
 RingBuffer ring_buffer;
 uint8_t data;
 
+// Mi ID
+#define MY_ID '1004214804'
+#define MY_NAME 'Sergio Botina'
+
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -203,6 +207,12 @@ int main(void)
               turn_signal_right();
           } else if (byte == 'H') {
               turn_signal_hazard();
+          }
+          // Tarea de implementación
+          
+          if (byte == MY_ID)
+          {
+           HAL_UART_Transmit(&huart2, (uint8_t*)MY_NAME, sizeof(MY_NAME), HAL_MAX_DELAY);
           }
       }
 
