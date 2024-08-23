@@ -34,3 +34,29 @@ uint8_t ring_buffer_get(RingBuffer *rb) {
     rb->is_full = 0;
     return data; // Buffer is not empty and data is returned
 }
+
+void ring_buffer_reset(RingBuffer *rb) {
+    rb->head = 0;
+    rb->tail = 0;
+    rb->is_full = 0;
+}
+
+uint16_t ring_buffer_size(RingBuffer *rb) {
+    if (rb->is_full) {
+        return rb->capacity;
+    }
+    if (rb->head >= rb->tail) {
+        return rb->head - rb->tail;
+    }
+    return rb->capacity + rb->head - rb->tail;
+}
+
+uint8_t ring_buffer_is_empty(RingBuffer *rb) {
+    return (rb->head == rb->tail && !rb->is_full);
+}
+
+uint8_t ring_buffer_is_full(RingBuffer *rb) {
+    return rb->is_full;
+}
+
+

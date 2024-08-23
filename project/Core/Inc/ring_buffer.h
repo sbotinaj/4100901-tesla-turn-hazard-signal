@@ -25,5 +25,14 @@ void ring_buffer_init(RingBuffer *rb, uint8_t *buffer, uint16_t capacity);
 void ring_buffer_put(RingBuffer *rb, uint8_t data);
 // Put a byte into the ring buffer
 uint8_t ring_buffer_get(RingBuffer *rb);
+// reset the ring buffer
+void ring_buffer_reset(RingBuffer *rb);
+// Check size of the ring buffer
+uint16_t ring_buffer_size(RingBuffer *rb);
+// check if the ring buffer is empty
+uint8_t ring_buffer_is_empty(RingBuffer *rb);
+// check if the ring buffer is full
+uint8_t ring_buffer_is_full(RingBuffer *rb);
+
 
 #endif /* SRC_RING_BUFFER_H_ */
