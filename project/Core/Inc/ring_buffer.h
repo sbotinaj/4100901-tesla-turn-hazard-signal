@@ -20,11 +20,11 @@ typedef struct {
 } RingBuffer;
 
 // Initialize the ring buffer
-void ring_buffer_init(RingBuffer *rb, uint8_t *buffer, uint16_t capacity); 
+void ring_buffer_init(RingBuffer *rb, uint8_t *buffer, uint16_t capacity);
 // Check if the ring buffer is full
 void ring_buffer_put(RingBuffer *rb, uint8_t data);
 // Put a byte into the ring buffer
-uint8_t ring_buffer_get(RingBuffer *rb);
+uint8_t ring_buffer_get(RingBuffer *rb, uint8_t *data);
 // reset the ring buffer
 void ring_buffer_reset(RingBuffer *rb);
 // Check size of the ring buffer

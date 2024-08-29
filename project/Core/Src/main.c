@@ -18,9 +18,8 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
-#include "ring_buffer.h"
-
-
+#include <string.h>
+#include "ring_buffer_2.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 
@@ -42,6 +41,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+UART_HandleTypeDef huart1;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
@@ -53,16 +53,26 @@ volatile uint8_t left_flag = 0;
 volatile uint8_t right_flag = 0;
 volatile uint8_t hazard_flag = 0;
 
-uint8_t data; // Variable para almacenar el dato recibido
+
 
 /*Variables para el Ring Buffer*/
-#define BUFFER_CAPACITY 128
-uint8_t ring_buffer_data[BUFFER_CAPACITY];
-RingBuffer ring_buffer;
-uint8_t data;
+#define BUFFER_CAPACITY (20)
+
+//buffer de datos Uart1
+uint8_t ring_buffer_1_data_1[BUFFER_CAPACITY];
+RingBuffer ring_buffer_1;
+static uint8_t data_1;
+
+
+
+// Buffer de datos Uart2
+uint8_t ring_buffer_2_data_2[BUFFER_CAPACITY];
+RingBuffer ring_buffer_2;
+static uint8_t data_2;
+volatile uint8_t data_ready = 0;
 
 // Mi ID
-#define MY_ID '1004214804'
+#define MY_ID "1004214804"
 #define MY_NAME 'Sergio Botina'
 
 /* USER CODE END PV */
@@ -71,6 +81,7 @@ uint8_t data;
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
 
 /* USER CODE END PFP */
@@ -120,9 +131,14 @@ void turn_signal_hazard(void){
 
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
-    if (huart->Instance == USART2) {
-        ring_buffer_put(&ring_buffer, data);
-        HAL_UART_Receive_IT(&huart2, &data, 1);
+  if(huart->Instance == USART1){
+    ring_buffer_put(&ring_buffer_1, data_1);
+    HAL_UART_Receive_IT(&huart1, &data_1, 1);
+  } else
+
+	if (huart->Instance == USART2) {
+        ring_buffer_2_put(&ring_buffer_2, data_2);
+        HAL_UART_Receive_IT(&huart2, &data_2, 1);
     }
 }
 
@@ -183,37 +199,59 @@ int main(void)
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
   MX_USART2_UART_Init();
+  MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
+
+  //define funtios for coneection to other nucleo board whit UART
+
 
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-  ring_buffer_init(&ring_buffer, ring_buffer_data, BUFFER_CAPACITY);
-  HAL_UART_Receive_IT(&huart2, &data, 1);
+  ring_buffer_2_init(&ring_buffer_2, ring_buffer_2_data_2, BUFFER_CAPACITY);
+  HAL_UART_Receive_IT(&huart2, &data_2, 1);// Inicializar la recepción de datos por interrupción
+  HAL_UART_Receive_IT(&huart1, &data_2, 1);// Inicializar la recepción de datos por interrupción
+
   while (1)
   {
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
+
 	  hearbeat();
-      if (ring_buffer.is_full || (ring_buffer.head != ring_buffer.tail)) {
-          uint8_t byte = ring_buffer_get(&ring_buffer);
-          // Procesar el byte 
-          HAL_UART_Transmit_IT(&huart2, &byte, 1);// Transmitir el byte de vuelta
-          if (byte == 'L') {
-              turn_signal_left();
-          } else if (byte == 'R') {
-              turn_signal_right();
-          } else if (byte == 'H') {
-              turn_signal_hazard();
+    if (ring_buffer_2_is_full(&ring_buffer_2) != 0) {
+        data_ready = ring_buffer_2_get(&ring_buffer_2, &data_2);
+        int8_t id_incorrect = 0;
+        char my_id[] = MY_ID;
+        for(uint8_t idx =0; idx < sizeof(my_id); idx++){
+          if(ring_buffer_2_get(&ring_buffer_2, &data_2) != 0){
+            if (data_2 != my_id[idx]){
+                id_incorrect = 1;
+            }
           }
-          // Tarea de implementación
-          
-          if (byte == MY_ID)
-          {
-           HAL_UART_Transmit(&huart2, (uint8_t*)MY_NAME, sizeof(MY_NAME), HAL_MAX_DELAY);
-          }
+        }
+        if(id_incorrect == 0){
+            HAL_UART_Transmit(&huart2, (uint8_t*)MY_NAME, strlen(MY_NAME), HAL_MAX_DELAY);
+        } else {
+            HAL_UART_Transmit(&huart2, (uint8_t*)"ID incorrecto\r\n", 15, HAL_MAX_DELAY);
+        }
+        // Procesar el data
+    //  if(ring_buffer_2.is_full || (ring_buffer_2.head != ring_buffer_2.tail)) {
+    //       data_ready = ring_buffer_2_get(&ring_buffer_2,&data);
+    //       // Procesar el data
+    //       HAL_UART_Transmit_IT(&huart2, &data, 1);// Transmitir el data de vuelta
+    //       if (data == 'L') {
+    //           turn_signal_left();
+    //       } else if (data == 'R') {
+    //           turn_signal_right();
+    //       } else if (data == 'H') {
+    //           turn_signal_hazard();
+    //       }
+    //       HAL_UART_Transmit(&huart2, (uint8_t*)"OK\n\r", 4, HAL_MAX_DELAY);
+    //       // Tarea de implementación
+        
+
       }
 
   }
@@ -268,6 +306,41 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief USART1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART1_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART1_Init 0 */
+
+  /* USER CODE END USART1_Init 0 */
+
+  /* USER CODE BEGIN USART1_Init 1 */
+
+  /* USER CODE END USART1_Init 1 */
+  huart1.Instance = USART1;
+  huart1.Init.BaudRate = 115200;
+  huart1.Init.WordLength = UART_WORDLENGTH_8B;
+  huart1.Init.StopBits = UART_STOPBITS_1;
+  huart1.Init.Parity = UART_PARITY_NONE;
+  huart1.Init.Mode = UART_MODE_TX_RX;
+  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
+  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
+  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  if (HAL_UART_Init(&huart1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART1_Init 2 */
+
+  /* USER CODE END USART1_Init 2 */
+
 }
 
 /**
